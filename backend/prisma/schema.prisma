@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(uuid())
+  name         String
+  email        String           @unique
+  passwordHash String?
+  role         Role             @default(STUDENT)
+  isBanned     Boolean          @default(false)
+  bio          String?
+  avatar       String?
+  createdAt    DateTime         @default(now())
+  comments     Comment[]
+  courses      Course[]
+  enrollments  Enrollment[]
+  posts        Post[]
+  progress     LessonProgress[]
+  likes        Like[]
+}
+
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  creatorId   String
+  status      CourseStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  cohorts     Cohort[]
+  creator     User         @relation(fields: [creatorId], references: [id])
+  lessons     Lesson[]
+  posts       Post[]
+}
+
+model Lesson {
+  id       String           @id @default(uuid())
+  title    String
+  content  String
+  order    Int
+  courseId String
+  course   Course           @relation(fields: [courseId], references: [id])
+  progress LessonProgress[]
+}
+
+model Cohort {
+  id          String       @id @default(uuid())
+  courseId    String
+  startDate   DateTime
+  endDate     DateTime
+  status      CohortStatus @default(UPCOMING)
+  course      Course       @relation(fields: [courseId], references: [id])
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  cohortId   String
+  enrolledAt DateTime @default(now())
+  cohort     Cohort   @relation(fields: [cohortId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, cohortId])
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  content   String
+  authorId  String
+  courseId  String?
+  createdAt DateTime  @default(now())
+  comments  Comment[]
+  likes     Like[]
+  author    User      @relation(fields: [authorId], references: [id])
+  course    Course?   @relation(fields: [courseId], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  authorId  String
+  postId    String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model LessonProgress {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  completed Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId])
+}
+
+model Like {
+  id     String @id @default(uuid())
+  userId String
+  postId String
+  user   User   @relation(fields: [userId], references: [id])
+  post   Post   @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+enum Role {
+  STUDENT
+  CREATOR
+  ADMIN
+}
+
+enum CourseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CohortStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
